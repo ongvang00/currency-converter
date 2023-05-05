@@ -1,74 +1,116 @@
-let myHeaders = new Headers();
-myHeaders.append("apikey", 'ruc3xqyjiPLoQPTtbPQgTQ38yfJ5ICP6');
+var myHeaders = new Headers();
+myHeaders.append("apikey", "ruc3xqyjiPLoQPTtbPQgTQ38yfJ5ICP6");
 
-let requestOptions = {
+var requestOptions = {
   method: 'GET',
   redirect: 'follow',
   headers: myHeaders
 };
-const baseCurrency = document.querySelector("#base-currency");
-const amountValue = document.querySelector("#amount");
-const targetCurrency = document.querySelector("#target-currency");
-const convertedAmount = document.querySelector("#converted-amount");
 
-//countries
-fetch("https://api.apilayer.com/exchangerates_data/symbols", requestOptions)
-  .then(response => response.json())
-  .then((data) => {
-    let baseCurrencyList = document.querySelector("#base-currency");
-    let targetCurrencyList = document.querySelector("#target-currency");
-    for (let symbol in data.symbols) {
-      let option = document.createElement("option");
-      option.value = symbol;
-      option.text = symbol;
-      baseCurrencyList.appendChild(option);
-   
-      const targetOption = option.cloneNode(true);
-      targetCurrencyList.appendChild(targetOption);
+const baseCurrency = document.getElementById('base-currency');
+const targetCurrency = document.getElementById('target-currency');
+
+
+async function getCurrencies() {
+  try {
+    const response = await fetch(`https://api.apilayer.com/exchangerates_data/symbols`, requestOptions)
+    const json = await response.json()
+    const currencies = Object.keys(json.symbols)
+    console.log(json)
+    for (const index in currencies) {
+        const option = document.createElement('option');
+        option.value = currencies[index];
+        option.text = `${currencies[index]}`;
+        baseCurrency.add(option.cloneNode(true));
+        targetCurrency.add(option);
     }
-  })
-  .catch(error => console.log('error', error));
+  } catch (error) {
+    console.error('Error fetching currencies:', error);
+  }
+}
 
-//conversion 
-  [baseCurrency, amountValue, targetCurrency].forEach(input=> {
-    input.addEventListener('change', () => {
-      const from = baseCurrency.value;
-      const to = targetCurrency.value;
-      const amount = amountValue.value;
-  
-      fetch(`https://api.apilayer.com/exchangerates_data/convert?to=${to}&from=${from}&amount=${amount}`, requestOptions)
-      .then(response => response.json())
-      .then(data => {
-        let result = data.result;
-        convertedAmount.textContent = result.toFixed(2) + " " + targetCurrency.value;
-        console.log(result);
-      })
-      .catch(error => console.log('error', error));
-    })
-  });
-
-//historical rate exchange
-const historicalButton = document.querySelector("#historical-rates");
-const historicalResults = document.querySelector("#historical-rates-container");
-
-historicalButton.addEventListener("click", () => {
-  const baseCurrency = document.querySelector("#base-currency").value;
-  const targetCurrency = document.querySelector("#target-currency").value;
-  const date = "2023-01-01";
+console.log (getCurrencies());
+baseCurrency.addEventListener('change', performConversion);
+targetCurrency.addEventListener('change', performConversion);
+amount.addEventListener('input', performConversion);
 
 
-  fetch(`https://api.apilayer.com/exchangerates_data/${date}?symbols=${targetCurrency}&base=${baseCurrency}`, requestOptions)
-  .then(response => response.json())
-  .then(data => {
-    const rates = data.rates;
-    let rate = 0;
-    for (let currency in rates) {
-      if(currency === targetCurrency) {
-        rate = rates[currency];
-        break;
-      }
+const amount = document.getElementById('amount');
+const convertedAmount = document.getElementById('converted-amount');
+async function performConversion() {
+  try {
+    const response = await fetch(`https://api.apilayer.com/exchangerates_data/convert?from=${baseCurrency.value}&to=${targetCurrency.value}&amount=${amount.value}&apikey=3mgP2F598I0n9pUpJqzrsMtJ3Tsh3Sty`);
+    const data = await response.json();
+    const result = data.result;
+    convertedAmount.textContent = result.toFixed(2);
+  } catch (error) {
+    console.error('Error!', error);
+    convertedAmount.textContent = 'Error conversion';
+  }
+}
+
+
+const historicalRates = document.getElementById('historical-rates');
+const historicalRatesContainer = document.getElementById('historical-rates-container');
+const saveFavorite = document.getElementById('save-favorite');
+const favoriteCurrencyPairs = document.getElementById('favorite-currency-pairs');
+
+
+async function fetchHistoricalRates() {
+  const from = baseCurrency.value;
+  const to = targetCurrency.value;
+  const date = '2020-03-11';
+
+  try {
+    const response = await fetch(`https://api.apilayer.com/exchangerates_data/${date}?base=${from}&symbols=${to}&apikey=3mgP2F598I0n9pUpJqzrsMtJ3Tsh3Sty`);
+    const data = await response.json();
+    const rate = data.rates[to]
+    historicalRatesContainer.innerHTML = `Historical exchange rate on ${date}: 1 ${from} = ${rate.toFixed(2)} ${to}`;
+    
+
+  } catch (error) {
+    console.error('Error fetching historical rates:', error);
+  }
+}
+
+historicalRates.addEventListener('click', fetchHistoricalRates);
+
+function displayFavorites() {
+    if (localStorage.getItem('favoritePairs')) {
+        const favoritePairs = JSON.parse(localStorage.getItem('favoritePairs'));
+        favoriteCurrencyPairs.innerHTML = '';
+        favoritePairs.forEach(pair => {
+            const pairElement = document.createElement('button');
+            pairElement.style.display = 'inline-block'
+            pairElement.className = 'favorite-pair';
+            pairElement.textContent = pair;
+            pairElement.addEventListener('click', () => {
+                const [from, to] = pair.split('-');
+                baseCurrency.value = from;
+                targetCurrency.value = to;
+                performConversion();
+            });
+            favoriteCurrencyPairs.appendChild(pairElement);
+        });
     }
-    historicalResults.textContent = `Historical exchange rate on ${date}: 1 ${baseCurrency} = ${rate} ${targetCurrency}`;
-  })
-  .catch(error => console.log('error', error));
-});
+}
+
+function saveFavorites() {
+    const pair = `${baseCurrency.value}-${targetCurrency.value}`;
+
+    if (!localStorage.getItem('favoritePairs')) {
+        localStorage.setItem('favoritePairs', JSON.stringify([]));
+    }
+
+    const favoritePairs = JSON.parse(localStorage.getItem('favoritePairs'));
+
+    if (baseCurrency.value !== "" && targetCurrency.value !== "" && !favoritePairs.includes(pair)) {
+        favoritePairs.push(pair);
+        localStorage.setItem('favoritePairs', JSON.stringify(favoritePairs));
+        displayFavorites();
+    }
+}
+    
+console.log (displayFavorites());
+
+saveFavorite.addEventListener('click', saveFavorites);
