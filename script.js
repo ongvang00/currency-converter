@@ -1,17 +1,17 @@
 var myHeaders = new Headers();
 myHeaders.append("apikey", "XLVdCfh0Is6qZXpOFd7QAs4KXVZlxZoR");
 
-
-
 var requestOptions = {
   method: 'GET',
   redirect: 'follow',
   headers: myHeaders
 };
 
+
 const baseCurrency = document.getElementById('base-currency');
 const targetCurrency = document.getElementById('target-currency');
-
+const amount = document.getElementById('amount');
+const convertedAmount = document.getElementById('converted-amount');
 
 async function getCurrencies() {
   try {
@@ -31,14 +31,10 @@ async function getCurrencies() {
   }
 }
 
-console.log (getCurrencies());
-baseCurrency.addEventListener('change', performConversion);
-targetCurrency.addEventListener('change', performConversion);
-amount.addEventListener('input', performConversion);
+console.log(getCurrencies());
 
 
-const amount = document.getElementById('amount');
-const convertedAmount = document.getElementById('converted-amount');
+
 async function performConversion() {
   try {
     const response = await fetch(`https://api.apilayer.com/exchangerates_data/convert?from=${baseCurrency.value}&to=${targetCurrency.value}&amount=${amount.value}&apikey=3mgP2F598I0n9pUpJqzrsMtJ3Tsh3Sty`);
@@ -46,10 +42,14 @@ async function performConversion() {
     const result = data.result;
     convertedAmount.textContent = result.toFixed(2);
   } catch (error) {
-    console.error('Error!', error);
-    convertedAmount.textContent = 'Error conversion';
+    console.error('Error performing conversion:', error);
+    convertedAmount.textContent = 'Error performing conversion';
   }
 }
+
+baseCurrency.addEventListener('change', performConversion);
+targetCurrency.addEventListener('change', performConversion);
+amount.addEventListener('input', performConversion);
 
 
 const historicalRates = document.getElementById('historical-rates');
@@ -61,7 +61,7 @@ const favoriteCurrencyPairs = document.getElementById('favorite-currency-pairs')
 async function fetchHistoricalRates() {
   const from = baseCurrency.value;
   const to = targetCurrency.value;
-  const date = '2020-03-11';
+  const date = '2023-03-11';
 
   try {
     const response = await fetch(`https://api.apilayer.com/exchangerates_data/${date}?base=${from}&symbols=${to}&apikey=3mgP2F598I0n9pUpJqzrsMtJ3Tsh3Sty`);
@@ -71,11 +71,9 @@ async function fetchHistoricalRates() {
     
 
   } catch (error) {
-    console.error('Error fetching historical rates:', error);
+    console.error('Error with historical rates:', error);
   }
 }
-
-historicalRates.addEventListener('click', fetchHistoricalRates);
 
 function displayFavorites() {
     if (localStorage.getItem('favoritePairs')) {
@@ -97,6 +95,7 @@ function displayFavorites() {
     }
 }
 
+historicalRates.addEventListener('click', fetchHistoricalRates);
 function saveFavorites() {
     const pair = `${baseCurrency.value}-${targetCurrency.value}`;
 
@@ -113,6 +112,6 @@ function saveFavorites() {
     }
 }
     
-console.log (displayFavorites());
+console.log(displayFavorites());
 
 saveFavorite.addEventListener('click', saveFavorites);
